@@ -1,0 +1,70 @@
+{
+  "name": "@djosh34/lmstudio-ai-sdk-provider",
+  "version": "0.0.1",
+  "description": "LM Studio provider for Vercel AI SDK using LMStudio Typescript SDK",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "start": "pnpm run build:run && node --enable-source-maps dist/index.js",
+    "build:run": "pnpm run type-check && rsbuild build",
+    "build": "tsup",
+    "format": "biome format --write ./src",
+    "lint": "biome lint --write ./src",
+    "type-check": "tsc --noEmit",
+    "test": "vitest"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "keywords": [
+    "ai",
+    "lmstudio",
+    "vercel",
+    "ai-sdk",
+    "provider",
+    "typescript"
+  ],
+  "author": "Joshua Azimullah",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/djosh34/lmstudio-ai-sdk-provider.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "packageManager": "pnpm@10.10.0",
+  "peerDependencies": {
+    "ai": "^4.3.16"
+  },
+  "dependencies": {
+    "@ai-sdk/provider": "^1.1.3",
+    "@ai-sdk/provider-utils": "^2.2.8",
+    "@lmstudio/sdk": "^1.2.2",
+    "neverthrow": "^8.2.0",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.3",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4",
+    "ai": "^4.3.16"
+  },
+  "optionalDependencies": {
+    "bufferutil": "^4.0.9"
+  }
+}
