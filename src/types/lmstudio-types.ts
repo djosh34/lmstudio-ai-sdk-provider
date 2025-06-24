@@ -42,6 +42,22 @@ const LLMToolUseSettingZodSchema = z
 	) satisfies z.ZodType<LLMToolUseSetting>;
 
 export interface LMStudioChatInputSettings {
+
+	/**
+	 * Base URL for the LM Studio instance.
+	 * 
+	 * When not specified, connects to LM Studio on localhost by default.
+	 * To connect to a remote LM Studio instance, enable "Serve on Local Network" 
+	 * in LM Studio settings and use the format: ws://[ip]:[port] (no trailing slashes).
+	 * 
+	 * @example
+	 * ```typescript
+	 * // Connect to remote LM Studio instance
+	 * baseURL: "ws://192.168.1.100:1234"
+	 * ```
+	 */
+	baseURL?: string;
+
 	contextOverflowPolicy?: LLMContextOverflowPolicy;
 	toolCallStopStrings?: string[];
 	xtcProbability?: number;

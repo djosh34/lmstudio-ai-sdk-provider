@@ -1,3 +1,4 @@
+import type { LMStudioClientConstructorOpts } from "@lmstudio/sdk";
 import { LMStudioChatLanguageModel } from "./lmstudio-chat-model";
 import type {
 	LMStudioChatInputSettings,
@@ -22,42 +23,35 @@ export interface LMStudioProvider {
 }
 
 export function createLMStudio(
-	providerSettings: LMStudioChatInputSettings = {},
+	options: LMStudioChatInputSettings = {},
+	lmstudioClientSettings?: LMStudioClientConstructorOpts,
 ): LMStudioProvider {
-	const createChatModel = (
-		modelId: LMStudioChatModelId,
-		settings?: LMStudioChatInputSettings,
-	) => {
+	const createChatModel = ( modelId: LMStudioChatModelId,) => {
 		if (new.target) {
 			throw new Error(
 				"The LMStudio model function cannot be called with the new keyword.",
 			);
 		}
-		if (!settings) {
-			return new LMStudioChatLanguageModel(modelId, providerSettings);
-		}
 
-		const model = new LMStudioChatLanguageModel(modelId, settings);
+		const model = new LMStudioChatLanguageModel(modelId, options, lmstudioClientSettings);
 		return model;
 	};
 
 	const createLanguageModel = (
 		modelId: LMStudioChatModelId,
-		settings?: LMStudioChatInputSettings,
 	) => {
 		if (new.target) {
 			throw new Error(
 				"The LMStudio model function cannot be called with the new keyword.",
 			);
 		}
-		return createChatModel(modelId, settings);
+		return createChatModel(modelId);
 	};
 
 	const provider = (
 		modelId: LMStudioChatModelId,
-		settings?: LMStudioChatInputSettings,
 	) => {
-		return createChatModel(modelId, settings);
+		return createChatModel(modelId);
 	};
 
 	provider.languageModel = createLanguageModel;

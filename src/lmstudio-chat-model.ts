@@ -53,11 +53,11 @@ export class LMStudioChatLanguageModel implements LanguageModelV1 {
 
 	constructor(
 		modelId: LMStudioChatModelId,
-		settings: LMStudioChatInputSettings,
+		settings?: LMStudioChatInputSettings,
 		clientSettings?: LMStudioClientConstructorOpts,
 	) {
 		this.modelId = modelId;
-		this.settings = settings;
+		this.settings = settings ?? {};
 
 		const lmstudioClientSettings: LMStudioClientConstructorOpts =
 			clientSettings ?? {};
@@ -68,6 +68,10 @@ export class LMStudioChatLanguageModel implements LanguageModelV1 {
 				error: () => {},
 				debug: () => {},
 			};
+		}
+
+		if (this.settings.baseURL) {
+			lmstudioClientSettings.baseUrl = this.settings.baseURL;
 		}
 
 		this.client = new LMStudioClient(lmstudioClientSettings);
