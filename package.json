@@ -1,6 +1,6 @@
 {
   "name": "@djosh34/lmstudio-ai-sdk-provider",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "LM Studio provider for Vercel AI SDK using LMStudio Typescript SDK",
   "type": "module",
   "main": "./dist/index.cjs",
