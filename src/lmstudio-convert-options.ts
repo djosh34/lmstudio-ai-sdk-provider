@@ -1,4 +1,4 @@
-import type { LanguageModelV1 } from "@ai-sdk/provider";
+import type { LanguageModelV2 } from "@ai-sdk/provider";
 import type {
 	LLMActionOpts,
 	LLMStructuredPredictionSetting,
@@ -17,13 +17,16 @@ import { ok, err, type Result } from "neverthrow";
 import { InvalidArgumentError } from "ai";
 
 function getStructured<TStructuredOutputType>(
-	options: Parameters<LanguageModelV1["doGenerate"]>[0],
+	options: Parameters<LanguageModelV2["doGenerate"]>[0],
 ): Explicit<LLMActionOpts<TStructuredOutputType>>["structured"] {
-	if (options.mode.type !== "object-json") {
+	if (!options.responseFormat) {
+		return FAKE_UNDEFINED;
+	}
+	if (options.responseFormat.type !== "json") {
 		return FAKE_UNDEFINED;
 	}
 
-	const schema = options.mode.schema;
+	const schema = options.responseFormat.schema;
 
 	const structured: LLMStructuredPredictionSetting = {
 		type: "json",
@@ -35,9 +38,9 @@ function getStructured<TStructuredOutputType>(
 
 function getLMStudioChatConfig(
 	provider: string,
-	options: Parameters<LanguageModelV1["doGenerate"]>[0],
+	options: Parameters<LanguageModelV2["doGenerate"]>[0],
 ): Result<LMStudioChatInputSettings | null, ZodIssue[]> {
-	const providerMetadata = options.providerMetadata;
+	const providerMetadata = options.providerOptions;
 	if (!providerMetadata) {
 		return ok(null);
 	}
@@ -56,7 +59,7 @@ function getLMStudioChatConfig(
 
 export function convertLMStudioChatCallOptions<TStructuredOutputType>(
 	provider: string,
-	generateOptions: Parameters<LanguageModelV1["doGenerate"]>[0],
+	generateOptions: Parameters<LanguageModelV2["doGenerate"]>[0],
 	providerSettings: LMStudioChatInputSettings,
 ): LLMActionOpts<TStructuredOutputType> {
 	const lmstudioOptions = getLMStudioChatConfig(provider, generateOptions);
@@ -83,7 +86,7 @@ export function convertLMStudioChatCallOptions<TStructuredOutputType>(
 	} satisfies LMStudioChatInputSettings;
 
 	const explicitOptions: Explicit<LLMActionOpts<TStructuredOutputType>> = {
-		maxTokens: options.maxTokens ?? FAKE_UNDEFINED,
+		maxTokens: options.maxOutputTokens ?? FAKE_UNDEFINED,
 		temperature: options.temperature ?? FAKE_UNDEFINED,
 
 		stopStrings: options.stopSequences ?? FAKE_UNDEFINED,
@@ -142,6 +145,11 @@ export function convertLMStudioChatCallOptions<TStructuredOutputType>(
 		onToolCallRequestFailure: FAKE_UNDEFINED,
 		onToolCallRequestDequeued: FAKE_UNDEFINED,
 		handleInvalidToolRequest: FAKE_UNDEFINED,
+		toolNaming: FAKE_UNDEFINED,
+		onToolCallRequestNameReceived: FAKE_UNDEFINED,
+		onToolCallRequestArgumentFragmentGenerated: FAKE_UNDEFINED,
+		onToolCallRequestFinalized: FAKE_UNDEFINED,
+		guardToolCall: FAKE_UNDEFINED,
 	};
 
 	const mappedOptions: LLMActionOpts<TStructuredOutputType> =

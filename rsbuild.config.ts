@@ -6,6 +6,7 @@ const config = defineConfig({
 			source: {
 				entry: {
 					index: "./src/index.ts",
+					exampleUsage: "./src/exampleUsage.ts",
 				},
 			},
 			output: {

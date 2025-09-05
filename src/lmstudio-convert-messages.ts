@@ -1,9 +1,8 @@
 import {
-	type CoreMessage,
 	type UserContent,
 	type AssistantContent,
 	type ToolContent,
-	InvalidToolArgumentsError,
+	InvalidToolInputError,
 } from "ai";
 import type {
 	ChatMessageData,
@@ -11,14 +10,14 @@ import type {
 	ChatMessagePartToolCallRequestData,
 	ChatMessagePartToolCallResultData,
 } from "@lmstudio/sdk";
-import type { LanguageModelV1CallWarning } from "@ai-sdk/provider";
+import type { LanguageModelV2CallWarning, LanguageModelV2Content, LanguageModelV2Prompt } from "@ai-sdk/provider";
 import { z } from "zod";
 
 function convertUserContent(content: UserContent): {
 	parts: ChatMessagePartTextData[];
-	warnings: LanguageModelV1CallWarning[];
+	warnings: LanguageModelV2CallWarning[];
 } {
-	const warnings: LanguageModelV1CallWarning[] = [];
+	const warnings: LanguageModelV2CallWarning[] = [];
 	if (typeof content === "string") {
 		return {
 			parts: [
@@ -51,9 +50,9 @@ function convertUserContent(content: UserContent): {
 
 function convertAssistantContent(content: AssistantContent): {
 	parts: (ChatMessagePartTextData | ChatMessagePartToolCallRequestData)[];
-	warnings: LanguageModelV1CallWarning[];
+	warnings: LanguageModelV2CallWarning[];
 } {
-	const warnings: LanguageModelV1CallWarning[] = [];
+	const warnings: LanguageModelV2CallWarning[] = [];
 
 	if (typeof content === "string") {
 		return {
@@ -78,10 +77,10 @@ function convertAssistantContent(content: AssistantContent): {
 				text: part.text,
 			});
 		} else if (part.type === "tool-call") {
-			const args = z.record(z.string(), z.unknown()).safeParse(part.args);
+			const args = z.record(z.string(), z.unknown()).safeParse(part.input);
 			if (!args.success) {
-				throw new InvalidToolArgumentsError({
-					toolArgs: JSON.stringify(part.args),
+				throw new InvalidToolInputError({
+					toolInput: JSON.stringify(part.input),
 					toolName: part.toolName,
 					cause: "Top-level arguments must be a record with string keys",
 				});
@@ -108,9 +107,9 @@ function convertAssistantContent(content: AssistantContent): {
 
 function convertToolContent(content: ToolContent): {
 	parts: ChatMessagePartToolCallResultData[];
-	warnings: LanguageModelV1CallWarning[];
+	warnings: LanguageModelV2CallWarning[];
 } {
-	const warnings: LanguageModelV1CallWarning[] = [];
+	const warnings: LanguageModelV2CallWarning[] = [];
 
 	const parts: ChatMessagePartToolCallResultData[] = [];
 	for (const part of content) {
@@ -118,7 +117,7 @@ function convertToolContent(content: ToolContent): {
 			parts.push({
 				type: "toolCallResult",
 				toolCallId: part.toolCallId,
-				content: JSON.stringify(part.result),
+				content: JSON.stringify(part.output),
 			});
 		} else {
 			warnings.push({
@@ -132,10 +131,10 @@ function convertToolContent(content: ToolContent): {
 }
 
 export function covertVercelMessagesToLMStudioMessages(
-	messages: CoreMessage[],
-): { messages: ChatMessageData[]; warnings: LanguageModelV1CallWarning[] } {
+	messages: LanguageModelV2Prompt,
+): { messages: ChatMessageData[]; warnings: LanguageModelV2CallWarning[] } {
 	const lmstudioMessages: ChatMessageData[] = [];
-	const warnings: LanguageModelV1CallWarning[] = [];
+	const warnings: LanguageModelV2CallWarning[] = [];
 
 	for (const message of messages) {
 		if (message.role === "user") {

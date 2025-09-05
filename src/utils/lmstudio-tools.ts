@@ -1,61 +1,52 @@
 import { generateId, zodSchema } from "ai";
 import type {
-	LanguageModelV1FunctionToolCall,
-	LanguageModelV1ToolChoice,
-	LanguageModelV1,
-	LanguageModelV1CallWarning,
+
+	LanguageModelV2,
+	LanguageModelV2CallWarning,
 } from "@ai-sdk/provider";
 import type { ChatMessageData, Tool } from "@lmstudio/sdk";
 
-export function getToolCalls(
-	messages: ChatMessageData[],
-): Array<LanguageModelV1FunctionToolCall> {
-	const toolCalls: Array<LanguageModelV1FunctionToolCall> = [];
-	for (const message of messages) {
-		if (message.role === "assistant") {
-			for (const part of message.content) {
-				if (part.type === "toolCallRequest") {
-					toolCalls.push({
-						toolCallType: part.toolCallRequest.type,
-						toolCallId: part.toolCallRequest.id ?? generateId(),
-						toolName: part.toolCallRequest.name,
-						args: JSON.stringify(part.toolCallRequest.arguments),
-					});
-				}
-			}
-		}
-	}
-	return toolCalls;
-}
+
+// export function getContent(
+// 	messages: ChatMessageData[],
+// ): Array<LanguageModelV2Content> {
+// 	const content: Array<LanguageModelV2Content> = [];
+// 	for (const message of messages) {
+// 		if (message.role === "assistant") {
+// 			for (const part of message.content) {
+// 				content.push(part);
+// 			}
+// 		}
+// 	}
+// 	return content;
+// }
+
+// export function getToolCalls(
+// 	messages: ChatMessageData[],
+// ): Array<LanguageModelV2FunctionToolCall> {
+// 	const toolCalls: Array<LanguageModelV2FunctionToolCall> = [];
+// 	for (const message of messages) {
+// 		if (message.role === "assistant") {
+// 			for (const part of message.content) {
+// 				if (part.type === "toolCallRequest") {
+// 					toolCalls.push({
+// 						toolCallType: part.toolCallRequest.type,
+// 						toolCallId: part.toolCallRequest.id ?? generateId(),
+// 						toolName: part.toolCallRequest.name,
+// 						args: JSON.stringify(part.toolCallRequest.arguments),
+// 					});
+// 				}
+// 			}
+// 		}
+// 	}
+// 	return toolCalls;
+// }
 
 export function getTools(
-	mode: Parameters<LanguageModelV1["doGenerate"]>[0]["mode"],
-): { tools: Tool[]; warnings: LanguageModelV1CallWarning[] } {
-	if (mode.type === "object-json") {
-		return { tools: [], warnings: [] };
-	}
+	mode: Parameters<LanguageModelV2["doGenerate"]>[0],
+): { tools: Tool[]; warnings: LanguageModelV2CallWarning[] } {
 
-	if (mode.type === "object-tool") {
-		return {
-			tools: [
-				{
-					name: mode.tool.name,
-					description: mode.tool.description ?? "",
-					type: "rawFunction",
-					parametersJsonSchema: mode.tool.parameters,
-					checkParameters: (params: Record<string, unknown>) => {},
-					implementation: async () => {},
-				},
-			],
-			warnings: [],
-		};
-	}
-
-	if (mode.toolChoice?.type === "none") {
-		return { tools: [], warnings: [] };
-	}
-
-	const warnings: LanguageModelV1CallWarning[] = [];
+	const warnings: LanguageModelV2CallWarning[] = [];
 	const tools: Tool[] = [];
 	for (const tool of mode.tools ?? []) {
 		if (tool.type !== "function") {
@@ -82,7 +73,7 @@ export function getTools(
 			name: tool.name,
 			description: tool.description ?? "",
 			type: "rawFunction",
-			parametersJsonSchema: tool.parameters,
+			parametersJsonSchema: tool.inputSchema,
 			checkParameters: (params: Record<string, unknown>) => {},
 			implementation: async () => {},
 		});

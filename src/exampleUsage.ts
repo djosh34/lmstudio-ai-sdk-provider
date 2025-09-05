@@ -1,6 +1,5 @@
 import { createLMStudio } from "@/lmstudio-provider";
-import type { LMStudioChatInputSettings } from "@/types/lmstudio-types";
-import { generateText, streamText, tool, type CoreMessage } from "ai";
+import { generateText, streamText, tool, type ModelMessage } from "ai";
 import { z } from "zod";
 
 export async function callLMStudio() {
@@ -10,10 +9,10 @@ export async function callLMStudio() {
 export async function callLMStudioGenerate() {
 	const model = createLMStudio().chat("qwen3-1.7b-dwq");
 
-	const messages: CoreMessage[] = [
+	const messages: ModelMessage[] = [
 		// {
 		// 	role: "user",
-		// 	content: "What is the meaning of life?",
+		// 	content: "What is the meaning of life?, talk a lot about it",
 		// },
 		// {
 		// 	role: "user",
@@ -56,7 +55,7 @@ export async function callLMStudioGenerate() {
 		tools: {
 			calculator: tool({
 				description: "A calculator",
-				parameters: z.object({ a: z.number(), b: z.number() }),
+				inputSchema: z.object({ a: z.number(), b: z.number() }),
 
 				execute: async ({ a, b }) => {
 					return a + b;
@@ -82,16 +81,15 @@ export async function callLMStudioGenerate() {
 			// }),
 		},
 		providerOptions: {
-			lmstudio: {
-				contextOverflowPolicy: "stopAtLimit",
-			},
+			// lmstudio: {
+				// contextOverflowPolicy: "stopAtLimit",
+			// },
 		},
-		maxSteps: 10,
 	});
 
 	// result.response.body = null;
 	// console.log(JSON.stringify(result, null, 2));
-	// console.log(result.reasoning);
+	console.log(result.content);
 	// console.log(result.text);
 	// console.log(result.toolCalls);
 	// console.log(JSON.stringify(result.warnings, null, 2));
@@ -100,7 +98,7 @@ export async function callLMStudioGenerate() {
 export async function callLMStudioStream() {
 	const model = createLMStudio().chat("qwen3-1.7b-dwq");
 
-	const messages: CoreMessage[] = [
+	const messages: ModelMessage[] = [
 		// {
 		// 	role: "user",
 		// 	content: "What is the meaning of life?",
@@ -147,7 +145,7 @@ export async function callLMStudioStream() {
 		tools: {
 			calculator: tool({
 				description: "A calculator",
-				parameters: z.object({ a: z.number(), b: z.number() }),
+				inputSchema: z.object({ a: z.number(), b: z.number() }),
 
 				execute: async ({ a, b }) => {
 					return a + b;
@@ -177,15 +175,16 @@ export async function callLMStudioStream() {
 				contextOverflowPolicy: "stopAtLimit",
 			},
 		},
-		maxSteps: 20,
-		toolCallStreaming: true,
 	});
 
 	for await (const chunk of result.fullStream) {
-		if (chunk.type === "reasoning" || chunk.type === "text-delta") {
-			process.stdout.write(chunk.textDelta);
+		if (chunk.type === "reasoning-delta" || chunk.type === "text-delta") {
+			process.stdout.write(chunk.text);
+			// console.log(chunk.text);
+			// console.log(JSON.stringify(chunk, null, 2));
+		} else {
+			console.log(JSON.stringify(chunk, null, 2));
 		}
-		// console.log(JSON.stringify(chunk, null, 2));
 	}
 
 	// result.response.body = null;
@@ -196,3 +195,5 @@ export async function callLMStudioStream() {
 	// console.log(JSON.stringify(result.warnings, null, 2));
 }
 // toolCallStreaming: true,
+
+callLMStudio();

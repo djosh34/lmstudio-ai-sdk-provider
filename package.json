@@ -10,8 +10,7 @@
     "dist/**/*"
   ],
   "scripts": {
-    "start": "pnpm run build:run && node --enable-source-maps dist/index.js",
-    "build:run": "pnpm run type-check && rsbuild build",
+    "start": "pnpm run build && node --enable-source-maps dist/exampleUsage.js",
     "build": "tsup",
     "format": "biome format --write ./src",
     "lint": "biome lint --write ./src",
@@ -51,18 +50,18 @@
     "ai": "^4.3.16"
   },
   "dependencies": {
-    "@ai-sdk/provider": "^1.1.3",
+    "@ai-sdk/provider": "^2.0.0",
     "@ai-sdk/provider-utils": "^2.2.8",
-    "@lmstudio/sdk": "^1.2.2",
+    "@lmstudio/sdk": "^1.5.0",
     "neverthrow": "^8.2.0",
-    "zod": "^3.25.67"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/node": "^24.0.3",
+    "@types/node": "^24.3.1",
+    "ai": "^5.0.33",
     "tsup": "^8.5.0",
-    "typescript": "^5.8.3",
-    "vitest": "^3.2.4",
-    "ai": "^4.3.16"
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.9"

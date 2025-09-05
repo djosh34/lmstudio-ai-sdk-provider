@@ -1,9 +1,9 @@
 import type {
-	LanguageModelV1,
-	LanguageModelV1FunctionTool,
-	LanguageModelV1FunctionToolCall,
-	LanguageModelV1ProviderDefinedTool,
-	LanguageModelV1StreamPart,
+	LanguageModelV2,
+	LanguageModelV2Content,
+	LanguageModelV2FunctionTool,
+	LanguageModelV2ProviderDefinedTool,
+	LanguageModelV2StreamPart,
 } from "@ai-sdk/provider";
 import { NoContentGeneratedError, NoSuchModelError } from "@ai-sdk/provider";
 import type {
@@ -29,20 +29,23 @@ import {
 	type LLMPredictionFragmentWithRoundIndex,
 } from "@lmstudio/sdk";
 import { mapLMStudioFinishReason } from "./utils/lmstudio-map-finish-reason";
-import { getToolCalls, getTools } from "./utils/lmstudio-tools";
+import { getTools } from "./utils/lmstudio-tools";
+import { convertContent } from "./utils/lmstudio-convert-content";
+import { generateId } from "ai";
 
 function isFunctionTool(
-	tool: LanguageModelV1FunctionTool | LanguageModelV1ProviderDefinedTool,
-): tool is LanguageModelV1FunctionTool {
+	tool: LanguageModelV2FunctionTool | LanguageModelV2ProviderDefinedTool,
+): tool is LanguageModelV2FunctionTool {
 	return "parameters" in tool;
 }
 
-type DoGenerateOutput = Awaited<ReturnType<LanguageModelV1["doGenerate"]>>;
-type DoStreamOutput = Awaited<ReturnType<LanguageModelV1["doStream"]>>;
+type DoGenerateOutput = Awaited<ReturnType<LanguageModelV2["doGenerate"]>>;
+type DoStreamOutput = Awaited<ReturnType<LanguageModelV2["doStream"]>>;
 
-export class LMStudioChatLanguageModel implements LanguageModelV1 {
-	readonly specificationVersion = "v1";
-	readonly defaultObjectGenerationMode = "tool";
+export class LMStudioChatLanguageModel implements LanguageModelV2 {
+	readonly specificationVersion = "v2";
+	readonly defaultObjectGenerationMode = "object-tool";
+	readonly supportedUrls = {};
 
 	readonly modelId: LMStudioChatModelId;
 	readonly settings: LMStudioChatInputSettings;
@@ -118,7 +121,7 @@ export class LMStudioChatLanguageModel implements LanguageModelV1 {
 	}
 
 	async doGenerate(
-		options: Parameters<LanguageModelV1["doGenerate"]>[0],
+		options: Parameters<LanguageModelV2["doGenerate"]>[0],
 	): Promise<DoGenerateOutput> {
 		const opts = convertLMStudioChatCallOptions(
 			this.provider,
@@ -130,7 +133,7 @@ export class LMStudioChatLanguageModel implements LanguageModelV1 {
 			covertVercelMessagesToLMStudioMessages(options.prompt);
 
 		const model = await this.getModel();
-		const { tools, warnings: toolWarnings } = getTools(options.mode);
+		const { tools, warnings: toolWarnings } = getTools(options);
 		warnings.push(...toolWarnings);
 
 		const vercelAbortSignal = options.abortSignal;
@@ -168,6 +171,7 @@ export class LMStudioChatLanguageModel implements LanguageModelV1 {
 
 		try {
 			await model.act({ messages: chatMessages }, tools, allOpts);
+			// await model.act("What is the meaning of life? speak for long...", [], callbackOpts);
 		} catch (error) {
 			const isAborted =
 				abortController.signal.aborted &&
@@ -185,66 +189,93 @@ export class LMStudioChatLanguageModel implements LanguageModelV1 {
 
 		const predictionResult = optionalPredictionResult as PredictionResult;
 
-		const toolCalls = getToolCalls(receivedChatMessages);
-		if (toolCalls.length > 0) {
-			return {
-				text: predictionResult.nonReasoningContent ?? undefined,
-				reasoning: predictionResult.reasoningContent ?? undefined,
-				finishReason: "tool-calls",
-				usage: {
-					promptTokens: predictionResult.stats.promptTokensCount ?? 0,
-					completionTokens: predictionResult.stats.predictedTokensCount ?? 0,
-				},
-				rawCall: {
-					rawPrompt: chatMessages,
-					rawSettings: {
-						...allOpts,
-					},
-				},
-				rawResponse: {
-					headers: {},
-					body: predictionResult,
-				},
-				response: {
-					modelId: predictionResult.modelInfo.identifier,
-				},
-				toolCalls: toolCalls,
-				warnings: warnings,
-			};
-		}
+		// const toolCalls = getToolCalls(receivedChatMessages);
+		// if (toolCalls.length > 0) {
+		// 	const content: LanguageModelV2Content[] = [];
+		// 	if (predictionResult.nonReasoningContent) {
+		// 		content.push({
+		// 			type: "text",
+		// 			text: predictionResult.nonReasoningContent,
+		// 		});
+		// 	}
+		// 	if (predictionResult.reasoningContent) {
+		// 		content.push({
+		// 			type: "reasoning",
+		// 			text: predictionResult.reasoningContent,
+		// 		});
+		// 	}
+		// 	return {
+		// 		content: content,
+		// 		finishReason: "tool-calls",
+		// 		usage: {
+		// 			inputTokens: predictionResult.stats.promptTokensCount ?? 0,
+		// 			outputTokens: predictionResult.stats.predictedTokensCount ?? 0,
+		// 			totalTokens: predictionResult.stats.totalTokensCount ?? 0,
+		// 		},
+		// 		request: {
+		// 			body: {
+		// 				rawPrompt: chatMessages,
+		// 				rawSettings: {
+		// 					...allOpts,
+		// 				},
+		// 			},
+		// 		},
+		// 		response: {
+		// 			headers: {},
+		// 			body: predictionResult,
+		// 			modelId: predictionResult.modelInfo.identifier,
+		// 		},
+		// 		toolCalls: toolCalls,
+		// 		warnings: warnings,
+		// 	};
+		// }
 
 		const finishReason = mapLMStudioFinishReason(
 			predictionResult.stats.stopReason,
 		);
 
+		const content: LanguageModelV2Content[] = convertContent(receivedChatMessages);
+		// const content: LanguageModelV2Content[] = [];
+		// if (predictionResult.nonReasoningContent) {
+		// 	content.push({
+		// 		type: "text",
+		// 		text: predictionResult.nonReasoningContent,
+		// 	});
+		// }
+		// if (predictionResult.reasoningContent) {
+		// 	content.push({
+		// 		type: "reasoning",
+		// 		text: predictionResult.reasoningContent,
+		// 	});
+		// }
+
 		return {
-			text: predictionResult.nonReasoningContent ?? undefined,
-			reasoning: predictionResult.reasoningContent ?? undefined,
+			content: content,
 			finishReason: finishReason,
 			usage: {
-				promptTokens: predictionResult.stats.promptTokensCount ?? 0,
-				completionTokens: predictionResult.stats.predictedTokensCount ?? 0,
+				inputTokens: predictionResult.stats.promptTokensCount ?? 0,
+				outputTokens: predictionResult.stats.predictedTokensCount ?? 0,
+				totalTokens: predictionResult.stats.totalTokensCount ?? 0,
 			},
-			rawCall: {
-				rawPrompt: chatMessages,
-				rawSettings: {
-					...allOpts,
+			request: {
+				body: {
+					rawPrompt: chatMessages,
+					rawSettings: {
+						...allOpts,
+					},
 				},
 			},
-			rawResponse: {
+			response: {
 				headers: {},
 				body: predictionResult,
-			},
-			response: {
 				modelId: predictionResult.modelInfo.identifier,
 			},
-			toolCalls: toolCalls,
 			warnings: warnings,
 		};
 	}
 
 	async doStream(
-		options: Parameters<LanguageModelV1["doStream"]>[0],
+		options: Parameters<LanguageModelV2["doStream"]>[0],
 	): Promise<DoStreamOutput> {
 		const opts = convertLMStudioChatCallOptions(
 			this.provider,
@@ -256,7 +287,7 @@ export class LMStudioChatLanguageModel implements LanguageModelV1 {
 			covertVercelMessagesToLMStudioMessages(options.prompt);
 
 		const model = await this.getModel();
-		const { tools, warnings: toolWarnings } = getTools(options.mode);
+		const { tools, warnings: toolWarnings } = getTools(options);
 		warnings.push(...toolWarnings);
 
 		const vercelAbortSignal = options.abortSignal;
@@ -275,8 +306,12 @@ export class LMStudioChatLanguageModel implements LanguageModelV1 {
 
 		const stream = new ReadableStream({
 			async start(
-				controller: ReadableStreamDefaultController<LanguageModelV1StreamPart>,
+				controller: ReadableStreamDefaultController<LanguageModelV2StreamPart>,
 			) {
+				let textStarted = false;
+				const textId = generateId();
+				const reasoningId = generateId();
+
 				const callbackOpts: LLMActBaseOpts<PredictionResult> = {
 					onPredictionFragment: (
 						fragment: LLMPredictionFragmentWithRoundIndex,
@@ -284,15 +319,35 @@ export class LMStudioChatLanguageModel implements LanguageModelV1 {
 						const reasoningType = fragment.reasoningType;
 
 						// Ignore reasoning start and end tags
+
 						if (reasoningType === "reasoning") {
 							controller.enqueue({
-								type: "reasoning",
-								textDelta: fragment.content,
+								type: "reasoning-delta",
+								id: reasoningId,
+								delta: fragment.content,
+							});
+						} else if (reasoningType === "reasoningStartTag") {
+							controller.enqueue({
+								type: "reasoning-start",
+								id: reasoningId,
+							});
+						} else if (reasoningType === "reasoningEndTag") {
+							controller.enqueue({
+								type: "reasoning-end",
+								id: reasoningId,
 							});
 						} else if (reasoningType === "none") {
+							if (!textStarted) {
+								textStarted = true;
+								controller.enqueue({
+									type: "text-start",
+									id: textId,
+								});
+							}
 							controller.enqueue({
 								type: "text-delta",
-								textDelta: fragment.content,
+								id: textId,
+								delta: fragment.content,
 							});
 						}
 					},
@@ -300,29 +355,29 @@ export class LMStudioChatLanguageModel implements LanguageModelV1 {
 						const messageWithAccess = new ChatMessageWithAccess(message);
 						const messageData = messageWithAccess.getData();
 
-						const toolCalls = getToolCalls([messageData]);
-						if (toolCalls.length > 0) {
-							toolWasCalled = true;
-						}
+						const toolCalls = convertContent([messageData]).filter(
+							(content) => content.type === "tool-call",
+						);
 
 						for (const toolCall of toolCalls) {
+							toolWasCalled = true;
 							controller.enqueue({
 								type: "tool-call",
-								toolCallType: "function",
 								toolCallId: toolCall.toolCallId,
 								toolName: toolCall.toolName,
-								args: toolCall.args,
+								input: toolCall.input,
 							});
 						}
 					},
-					onRoundEnd: () => {
+					onRoundEnd: (roundIndex) => {
 						abortController.abort(ALWAYS_ABORT_AFTER_TOOL_CALL_REASON);
 					},
 					onPredictionCompleted: (prediction) => {
 						optionalPredictionResult = prediction;
 					},
-					signal: abortController.signal,
+					// signal: abortController.signal,
 					allowParallelToolExecution: true,
+					maxPredictionRounds: 100,
 				};
 
 				const allOpts = {
@@ -361,8 +416,9 @@ export class LMStudioChatLanguageModel implements LanguageModelV1 {
 					type: "finish",
 					finishReason: finishReason,
 					usage: {
-						promptTokens: predictionResult.stats.promptTokensCount ?? 0,
-						completionTokens: predictionResult.stats.predictedTokensCount ?? 0,
+						inputTokens: predictionResult.stats.promptTokensCount ?? 0,
+						outputTokens: predictionResult.stats.predictedTokensCount ?? 0,
+						totalTokens: predictionResult.stats.totalTokensCount ?? 0,
 					},
 				});
 
@@ -372,16 +428,17 @@ export class LMStudioChatLanguageModel implements LanguageModelV1 {
 
 		return {
 			stream: stream,
-			rawCall: {
-				rawPrompt: chatMessages,
-				rawSettings: {
-					...opts,
+			request: {
+				body: {
+					rawPrompt: chatMessages,
+					rawSettings: {
+						...opts,
+					},
 				},
 			},
-			rawResponse: {
+			response: {
 				headers: {},
 			},
-			warnings: warnings,
 		};
 	}
 }
